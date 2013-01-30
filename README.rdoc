@@ -1,0 +1,3 @@
+= Simple RSS Dynamic Concerto
+
+This plugin provides simple RSS parsing via Dynamic Content in Concerto 2.

@@ -1,0 +1,15 @@
+<fieldset>
+  <legend><span>RSS</span></legend>
+  <div class="clearfix">
+    <%= form.fields_for :config do |config| %>
+    <label>URL</label>
+    <div class="input">
+      <%= config.text_area 'url' %>
+    </div>
+    <label>Display type</label>
+    <div class="input">
+      <%= config.select 'output_format', [["Headlines", "headlines"], ["Articles", "detailed"]] %>
+    </div>
+    <% end %>
+  </div>
+</fieldset>
