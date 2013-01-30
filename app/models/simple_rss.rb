@@ -1,5 +1,7 @@
 class SimpleRss < DynamicContent
 
+  DISPLAY_NAME = 'RSS Feed'
+
   def build_content
     require 'rss'
     require 'net/http'
