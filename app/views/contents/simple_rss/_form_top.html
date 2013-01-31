@@ -1,15 +1,17 @@
 <fieldset>
   <legend><span>RSS</span></legend>
-  <div class="clearfix">
-    <%= form.fields_for :config do |config| %>
-    <label>URL</label>
-    <div class="input">
-      <%= config.text_area 'url' %>
+  <%= form.fields_for :config do |config| %>
+    <div class="clearfix">
+      <%= config.label :url %>
+      <div class="input">
+        <%= config.text_field 'url', :placeholder => 'http://feeds.bbci.co.uk/news/rss.xml', :size => 100 %>
+      </div>
     </div>
-    <label>Display type</label>
-    <div class="input">
-      <%= config.select 'output_format', [["Headlines", "headlines"], ["Articles", "detailed"]] %>
+    <div class="clearfix">
+      <%= config.label :output_format, 'Display Format' %>
+      <div class="input">
+        <%= config.select :output_format, [["Headlines", "headlines"], ["Articles", "detailed"]] %>
+      </div>
     </div>
-    <% end %>
-  </div>
+  <% end %>
 </fieldset>
