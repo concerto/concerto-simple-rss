@@ -4,9 +4,9 @@
   <dt>Format</dt>
   <dd><%= content.config['output_format'].titleize %></dd>
   <dt>Last Successful Update</dt>
-  <dd><%= Time.at(content.config['last_ok_refresh']).strftime('%c') %></dd>
+  <dd><%= content.config.include?('last_ok_refresh') ? Time.at(content.config['last_ok_refresh']).strftime('%c') : 'Never' %></dd>
   <dt>Last Attempted Update</dt>
-  <dd><%= distance_of_time_in_words_to_now(Time.at(content.config['last_refresh_attempt'])).titleize %> Ago</dd>
+  <dd><%= content.config.include?('last_refresh_attempt') ? distance_of_time_in_words_to_now(Time.at(content.config['last_refresh_attempt'])).titleize : 'Never' %> Ago</dd>
   <dt>Current Live Children</dt>
   <dd><%= content.children.active.count %></dd>
   <dt>Min. Refresh Interval</dt>
