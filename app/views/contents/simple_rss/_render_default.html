@@ -1,0 +1,14 @@
+<dl>
+  <dt>URL</dt>
+  <dd><%= content.config['url'] %></dd>
+  <dt>Format</dt>
+  <dd><%= content.config['output_format'].titleize %></dd>
+  <dt>Last Success Update</dt>
+  <dd><%= Time.at(content.config['last_ok_refresh']).strftime('%c') %></dd>
+  <dt>Last Attempted Update</dt>
+  <dd><%= distance_of_time_in_words_to_now(Time.at(content.config['last_refresh_attempt'])).titleize %> Ago</dd>
+  <dt>Current Live Children</dt>
+  <dd><%= content.children.active.count %></dd>
+  <dt>Min. Refresh Interval</dt>
+  <dd><%= distance_of_time_in_words(content.config['interval'].to_i) %></dd>
+</dl>
