@@ -1,4 +1,4 @@
 Rails.application.routes.draw do
 
-  mount C2SimpleRss::Engine => "/c2_simple_rss"
+  mount ConcertoSimpleRss::Engine => "/concerto_simple_rss"
 end
