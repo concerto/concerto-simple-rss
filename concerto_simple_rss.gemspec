@@ -13,7 +13,7 @@ Gem::Specification.new do |s|
   s.summary     = "RSS Dynamic Concerto for Concerto 2."
   s.description = "Simple support to render RSS content in Concerto 2."
 
-  s.files = Dir["{app,config,db,lib}/**/*"] + ["LICENSE", "Rakefile", "README.md"]
+  s.files = Dir["{app,config,db,lib,public}/**/*"] + ["LICENSE", "Rakefile", "README.md"]
   s.test_files = Dir["test/**/*"]
 
   s.add_dependency "rails", "~> 3.2.11"
