@@ -4,13 +4,13 @@
     <div class="clearfix">
       <%= config.label :url %>
       <div class="input">
-        <%= config.text_field 'url', :placeholder => 'http://feeds.bbci.co.uk/news/rss.xml', :size => 100 %>
+        <%= config.url_field :url, :placeholder => 'http://feeds.bbci.co.uk/news/rss.xml', :size => 100, :value => @content.config['url'] %>
       </div>
     </div>
     <div class="clearfix">
       <%= config.label :output_format, 'Display Format' %>
       <div class="input">
-        <%= config.select :output_format, [["Headlines", "headlines"], ["Articles", "detailed"]] %>
+        <%= config.select :output_format, [["Headlines", "headlines"], ["Articles", "detailed"]], :selected => @content.config['output_format'] %>
       </div>
     </div>
   <% end %>

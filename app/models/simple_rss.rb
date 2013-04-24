@@ -54,5 +54,8 @@ class SimpleRss < DynamicContent
     if self.config['url'].blank?
       errors.add(:config_url, "can't be blank")
     end
+    if !['headlines', 'detailed'].include?(self.config['output_format'])
+      errors.add(:config_output_format, "must be Headlines or Articles")
+    end
   end
 end
