@@ -2,6 +2,8 @@ class SimpleRss < DynamicContent
 
   DISPLAY_NAME = 'RSS Feed'
 
+  validate :validate_config
+
   def build_content
     require 'rss'
     require 'net/http'
@@ -46,5 +48,11 @@ class SimpleRss < DynamicContent
   def self.form_attributes
     attributes = super()
     attributes.concat([:config => [:url, :output_format]])
+  end
+
+  def validate_config
+    if self.config['url'].blank?
+      errors.add(:config_url, "can't be blank")
+    end
   end
 end
