@@ -36,6 +36,28 @@ class SimpleRss < DynamicContent
     return contents
   end
 
+  # get the title of the feed for display on the main tile
+  def title
+    require 'rss'
+    require 'net/http'
+    url = self.config['url']
+#Rails.logger.debug("looking up feed title for #{url}")    
+
+    # assume the feed is valid at this point
+    feed = Net::HTTP.get_response(URI.parse(url)).body
+    rss = RSS::Parser.parse(feed, false, true)
+    rss.channel.title  
+  end
+
+  # make sure the feed title gets saved to the config
+  def save_config
+    if self.parent.nil?
+      self.config['title'] = title
+    end 
+
+    super
+  end
+
   # try to determine if the feed is valid by returning its type RSS, ATOM, or UNKNOWN (invalid)
   def feed_type(url)
     type = 'UNKNOWN'
