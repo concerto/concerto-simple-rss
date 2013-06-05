@@ -36,6 +36,36 @@ class SimpleRss < DynamicContent
     return contents
   end
 
+  # try to determine if the feed is valid by returning its type RSS, ATOM, or UNKNOWN (invalid)
+  def feed_type(url)
+    type = 'UNKNOWN'
+
+    begin
+      require 'rss'
+      require 'net/http'
+      feed = Net::HTTP.get_response(URI.parse(url)).body
+
+      begin
+        rss = RSS::Parser.parse(feed, false, true)
+      rescue => e
+        # cant parse rss
+      else
+        type = "RSS"      
+      end
+
+      begin
+        feed_title = rss.channel.title
+      rescue
+        # oops, must be atom?
+        type = "ATOM"
+      end
+    rescue
+      # bad url?
+    end
+
+    type
+  end
+
   def item_to_html(item)
     return "<h1>#{item.title}</h1><p>#{item.description}</p>"
   end
@@ -53,6 +83,10 @@ class SimpleRss < DynamicContent
   def validate_config
     if self.config['url'].blank?
       errors.add(:config_url, "can't be blank")
+    else
+      if feed_type(self.config['url']) != "RSS"
+        errors.add(:config_url, "does not appear to be an RSS feed")
+      end
     end
     if !['headlines', 'detailed'].include?(self.config['output_format'])
       errors.add(:config_output_format, "must be Headlines or Articles")
