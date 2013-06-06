@@ -76,7 +76,14 @@ class SimpleRss < DynamicContent
       description = item.description
     when "ATOM"
       title = item.title.content
-      description = (item.summary.nil? ? item.content.to_s : item.summary.content)
+
+      # seems like the hard way, but the only way I could figure out to get the 
+      # contents without it being html encoded.  most likely a prime candidate for optimizing
+      require 'rexml/document'
+      entry_xml = REXML::Document.new(item.to_s)
+      content_html = REXML::XPath.first(entry_xml, "entry/content").text
+
+      description = (item.summary.nil? ? content_html : item.summary.content)
     end
 
     return "<h1>#{title}</h1><p>#{description.html_safe}</p>"
