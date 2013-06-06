@@ -1,3 +1,18 @@
-<h1><%= content.name %></h1>
-<br />
-<%= content.config['url'] %>
+<div class="default-padding">
+  <% if content.config.include?('title') %>
+    <h1><%= content.config['title'] %></h1>
+    <p></p>
+  <% end %>
+  <h2 class="center">
+    <%= content.name %>
+  </h2>
+  <p>
+    <%= content.config['url'] %>
+  </p>
+</div>
+<% if content.config.include?('last_ok_refresh') %>
+<div class="brand muted default-padding">
+  <br/>
+  <%= distance_of_time_in_words_to_now(Time.at(content.config['last_ok_refresh'])).titleize %> Ago
+</div>
+<% end %>
