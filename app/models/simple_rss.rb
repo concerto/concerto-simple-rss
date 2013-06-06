@@ -31,7 +31,8 @@ class SimpleRss < DynamicContent
         raise ArgumentError, 'Unexpected output format for RSS feed.'
       end
     else
-      raise ArgumentError, "Unexpected feed format for #{url}."
+      Rails.logger.error("could not fetch #{type} feed for #{feed_title} at #{url}")
+      raise "Unexpected feed format for #{url}."
     end
 
     return contents
