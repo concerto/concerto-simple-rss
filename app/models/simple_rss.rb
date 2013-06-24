@@ -50,6 +50,7 @@ class SimpleRss < DynamicContent
     begin
       feed = Net::HTTP.get_response(URI.parse(url)).body
       rss = RSS::Parser.parse(feed, false, true)
+      raise "feed could not be parsed" if rss.nil?
     rescue => e
       # cant parse rss or url is bad
       Rails.logger.debug("unable to fetch or parse feed - #{url}, #{e.message}")
