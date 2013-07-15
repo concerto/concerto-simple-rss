@@ -48,7 +48,16 @@ class SimpleRss < DynamicContent
     rss = nil
 
     begin
-      feed = Net::HTTP.get_response(URI.parse(url)).body
+      uri = URI.parse(url)
+      case uri.scheme
+        when "http"
+          feed = Net::HTTP.get_response(uri).body
+        when "https"
+          http = Net::HTTP.new(uri.host, uri.port)
+          http.use_ssl = true
+          request = Net::HTTP::Get.new(uri.request_uri)
+          feed = http.request(request).body
+      end
       rss = RSS::Parser.parse(feed, false, true)
       raise "feed could not be parsed" if rss.nil?
     rescue => e
