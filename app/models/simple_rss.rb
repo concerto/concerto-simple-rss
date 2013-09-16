@@ -92,6 +92,7 @@ class SimpleRss < DynamicContent
       description = (item.summary.nil? ? content_html : item.summary.content)
     end
 
+    description ||= ""
     return "<h1>#{title}</h1><p>#{description.html_safe}</p>"
   end
 
