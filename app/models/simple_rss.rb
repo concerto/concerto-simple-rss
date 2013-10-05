@@ -138,8 +138,4 @@ class SimpleRss < DynamicContent
     end
   end
 
-  def self.preview(data)
-    "Hi"
-  end
-
 end
