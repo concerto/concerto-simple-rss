@@ -137,5 +137,4 @@ class SimpleRss < DynamicContent
       errors.add(:config_output_format, "must be Headlines or Articles")
     end
   end
-
 end
