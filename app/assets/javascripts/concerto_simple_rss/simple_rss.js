@@ -29,7 +29,7 @@ function simpleRSSPreview(rss_data) {
 
   // Build rss preview for only a sample of article titles
   rss_preview = "<div><p style='font-weight: bold'>Found " + articles.length + " articles total</p></div>";
-  for (var i = 0; i < 4; i++) {
+  for (var i = 0; i < Math.min(4, articles.length); i++) {
     rss_preview += "<div>" +
       "<p style='font-size: 14px; text-decoration: underline'>" + articles[i]['title'] + "</p>" +
       "<p>" + articles[i]['contentSnippet'] + "</p>" + "</div>";
