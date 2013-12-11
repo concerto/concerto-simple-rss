@@ -15,5 +15,11 @@
         <%= config.select :output_format, [["Headlines", "headlines"], ["Articles", "detailed"]], :selected => @content.config['output_format'] %>
       </div>
     </div>
+    <div class="clearfix">
+      <%= config.label :reverse_order, 'Reverse order of items?' %>
+      <div class="input">
+        <%= config.select :reverse_order, [["No", 0], ["Yes", 1]] %>
+      </div>
+    </div>
   <% end %>
 </fieldset>
