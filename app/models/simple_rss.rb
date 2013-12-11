@@ -12,6 +12,9 @@ class SimpleRss < DynamicContent
     
     if (["RSS", "ATOM"].include? type) && !feed_title.blank?
       # it is a valid feed
+      if !self.config['reverse_order'].blank? && self.config['reverse_order'] == '1'
+        rss.items.reverse!
+      end
       case self.config['output_format']
       when 'headlines'
         rss.items.each_slice(5).with_index do |items, index|
@@ -111,7 +114,7 @@ class SimpleRss < DynamicContent
   # Simple RSS processing needs a feed URL and the format of the output content.
   def self.form_attributes
     attributes = super()
-    attributes.concat([:config => [:url, :output_format]])
+    attributes.concat([:config => [:url, :output_format, :reverse_order]])
   end
 
   # if the feed is valid we store the title in config
