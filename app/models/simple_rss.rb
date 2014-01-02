@@ -15,16 +15,20 @@ class SimpleRss < DynamicContent
       if !self.config['reverse_order'].blank? && self.config['reverse_order'] == '1'
         rss.items.reverse!
       end
+      feed_items = rss.items
+      if !self.config['max_items'].blank? && self.config['max_items'].to_i > 0
+        feed_items = feed_items.first(self.config['max_items'].to_i)
+      end
       case self.config['output_format']
       when 'headlines'
-        rss.items.each_slice(5).with_index do |items, index|
+        feed_items.each_slice(5).with_index do |items, index|
           htmltext = HtmlText.new()
           htmltext.name = "#{feed_title} (#{index+1})"
           htmltext.data = "<h1>#{feed_title}</h1> #{items_to_html(items, type)}"
           contents << htmltext
         end
       when 'detailed'
-        rss.items.each_with_index do |item, index|
+        feed_items.each_with_index do |item, index|
           htmltext = HtmlText.new()
           htmltext.name = "#{feed_title} (#{index+1})"
           htmltext.data = item_to_html(item, type)
@@ -114,7 +118,7 @@ class SimpleRss < DynamicContent
   # Simple RSS processing needs a feed URL and the format of the output content.
   def self.form_attributes
     attributes = super()
-    attributes.concat([:config => [:url, :output_format, :reverse_order]])
+    attributes.concat([:config => [:url, :output_format, :reverse_order, :max_items]])
   end
 
   # if the feed is valid we store the title in config
