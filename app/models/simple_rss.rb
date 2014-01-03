@@ -68,11 +68,15 @@ class SimpleRss < DynamicContent
     feed = nil
 
     begin
-      uri = URI.parse(url)
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = uri.scheme == 'https'
-      request = Net::HTTP::Get.new(uri.request_uri)
-      feed = http.request(request).body
+      # cache same url for 1 minute to alleviate redundant calls when previewing
+      feed = Rails.cache.fetch(url, :expires_in => 1.minute) do
+        uri = URI.parse(url)
+        http = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = uri.scheme == 'https'
+        request = Net::HTTP::Get.new(uri.request_uri)
+        http.request(request).body
+      end
+
       rss = RSS::Parser.parse(feed, false, true)
       raise "feed could not be parsed" if rss.nil?
     rescue => e
@@ -191,6 +195,8 @@ Rails.logger.debug(data.inspect)
       o.config['url'] = data[:url]
       o.config['output_format'] = data[:output_format]
       o.config['max_items'] = data[:max_items]
+      o.config['reverse_order'] = data[:reverse_order]
+      o.config['xsl'] = data[:xsl]
       results = o.build_content.first.data
     rescue => e
       results = "Unable to preview #{e.message}"
