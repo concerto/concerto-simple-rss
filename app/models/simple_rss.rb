@@ -181,4 +181,22 @@ class SimpleRss < DynamicContent
       end
     end
   end
+
+  # return the first item for use as a preview
+  # data is a hash of the config
+  def self.preview(data)
+Rails.logger.debug(data.inspect)    
+    begin
+      o = SimpleRss.create()
+      o.config['url'] = data[:url]
+      o.config['output_format'] = data[:output_format]
+      o.config['max_items'] = data[:max_items]
+      results = o.build_content.first.data
+    rescue => e
+      results = "Unable to preview #{e.message}"
+    end
+
+    return results
+  end
+
 end
