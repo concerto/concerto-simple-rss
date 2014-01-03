@@ -12,13 +12,19 @@
     <div class="clearfix">
       <%= config.label :output_format, 'Display Format' %>
       <div class="input">
-        <%= config.select :output_format, [["Headlines", "headlines"], ["Articles", "detailed"]], :selected => @content.config['output_format'] %>
+        <%= config.select :output_format, [["Headlines", "headlines"], ["Articles", "detailed"], ["XSLT", "xslt"]], :selected => @content.config['output_format'] %>
       </div>
     </div>
     <div class="clearfix">
       <%= config.label :reverse_order, 'Reverse order of items?' %>
       <div class="input">
         <%= config.select :reverse_order, [["No", 0], ["Yes", 1]] %>
+      </div>
+    </div>
+    <div class="clearfix">
+      <%= config.label :xsl, 'XSL Markup' %>
+      <div class="input">
+        <%= config.text_area :xsl, :class => "span12", :value => @content.config['xsl'] %>
       </div>
     </div>
   <% end %>
