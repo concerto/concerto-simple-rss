@@ -37,5 +37,28 @@ function simpleRSSPreview(rss_data) {
   $('#preview_div').html(rss_preview);
 }
 
+function toggleSimpleRssConditionalInputs() {
+  if ($('select#simple_rss_config_output_format').val() == 'xslt') {
+    $('div#simple_rss_maxitems').hide();
+    $('div#simple_rss_xslmarkup').show();
+  } else {
+    $('div#simple_rss_maxitems').show();
+    $('div#simple_rss_xslmarkup').hide();
+  }
+}
+
+var initializedSimpleRssHandlers = false;
+function initializeSimpleRssHandlers() {
+  if (!initializedSimpleRssHandlers) {
+    $('select#simple_rss_config_output_format').on('change', toggleSimpleRssConditionalInputs);
+    toggleSimpleRssConditionalInputs();
+
+    initializedSimpleRssHandlers = true;
+  }
+}
+
 $(document).ready(initializeSimpleRSSPreview);
 $(document).on('page:change', initializeSimpleRSSPreview);
+
+$(document).ready(initializeSimpleRssHandlers);
+$(document).on('page:change', initializeSimpleRssHandlers);
