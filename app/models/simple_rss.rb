@@ -8,7 +8,7 @@ class SimpleRss < DynamicContent
     contents = []
 
     url = self.config['url']
-    type, feed_title, rss = fetch_feed(url)
+    type, feed_title, rss, raw = fetch_feed(url)
     
     if (["RSS", "ATOM"].include? type) && !feed_title.blank?
       # it is a valid feed
@@ -34,6 +34,18 @@ class SimpleRss < DynamicContent
           htmltext.data = item_to_html(item, type)
           contents << htmltext
         end
+      when 'xslt'
+        require 'rexml/document'
+        require 'xml/xslt'
+
+        XML::XSLT.registerErrorHandler { |string| puts string }
+        xslt = XML::XSLT.new()
+        xslt.xml = REXML::Document.new(raw)
+        xslt.xsl = REXML::Document.new(self.config['xsl'])
+        htmltext = HtmlText.new()
+        htmltext.name = "#{feed_title}"
+        htmltext.data = xslt.serve()
+        contents << htmltext
       else
         raise ArgumentError, 'Unexpected output format for RSS feed.'
       end
@@ -45,7 +57,7 @@ class SimpleRss < DynamicContent
     return contents
   end
 
-  # fetch the feed, return the type, title, and contents
+  # fetch the feed, return the type, title, and contents (parsed) and raw feed (unparsed)
   def fetch_feed(url)
     require 'rss'
     require 'net/http'
@@ -53,6 +65,7 @@ class SimpleRss < DynamicContent
     type = 'UNKNOWN'
     title = ''
     rss = nil
+    feed = nil
 
     begin
       uri = URI.parse(url)
@@ -79,7 +92,7 @@ class SimpleRss < DynamicContent
       end
     end
 
-    return type, title, rss
+    return type, title, rss, feed
   end
 
   def item_to_html(item, type)
@@ -118,7 +131,7 @@ class SimpleRss < DynamicContent
   # Simple RSS processing needs a feed URL and the format of the output content.
   def self.form_attributes
     attributes = super()
-    attributes.concat([:config => [:url, :output_format, :reverse_order, :max_items]])
+    attributes.concat([:config => [:url, :output_format, :reverse_order, :max_items, :xsl]])
   end
 
   # if the feed is valid we store the title in config
@@ -131,17 +144,41 @@ class SimpleRss < DynamicContent
       if (["RSS", "ATOM"].include? type) && !title.blank?
         self.config['title'] = title
       else
-        errors.add(:config_url, "does not appear to be an RSS feed")
+        errors.add(:base, "URL does not appear to be an RSS feed")
       end
     end
   end
 
   def validate_config
     if self.config['url'].blank?
-      errors.add(:config_url, "can't be blank")
+      errors.add(:base, "URL can't be blank")
     end
-    if !['headlines', 'detailed'].include?(self.config['output_format'])
-      errors.add(:config_output_format, "must be Headlines or Articles")
+
+    if !['headlines', 'detailed', 'xslt'].include?(self.config['output_format'])
+      errors.add(:base, "Display Format must be Headlines or Articles or XSLT")
+    end
+
+    if self.config['output_format'] == 'xslt'
+      if self.config['xsl'].blank?
+        errors.add(:base, "XSL Markup can't be blank when using the XSLT Display Format")
+      else
+        url = self.config['url']
+        unless url.blank? 
+          require 'rexml/document'
+          require 'xml/xslt'
+
+          type, title, rss, raw = fetch_feed(url)
+          if ["RSS", "ATOM"].include? type
+            begin
+              xslt = XML::XSLT.new()
+              xslt.xml = REXML::Document.new(raw)
+              xslt.xsl = REXML::Document.new(self.config['xsl'])
+            rescue XML::XSLT::ParsingError
+              errors.add(:base, "XSL Markup could not be parsed")
+            end
+          end
+        end
+      end
     end
   end
 end
