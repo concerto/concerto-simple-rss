@@ -189,7 +189,6 @@ class SimpleRss < DynamicContent
   # return the first item for use as a preview
   # data is a hash of the config
   def self.preview(data)
-Rails.logger.debug(data.inspect)    
     begin
       o = SimpleRss.create()
       o.config['url'] = data[:url]
