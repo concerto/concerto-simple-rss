@@ -1,34 +1,3 @@
-// function getRSSData(rss_url) {
-//   // Get the rss data based in input url
-//   $.ajax({
-//     type: "GET",
-//     dataType: 'jsonp',
-//     url: document.location.protocol + '//ajax.googleapis.com/ajax/services/feed/load?v=1.0&num=1000&callback=?&q=' + encodeURIComponent(rss_url),
-//     success: function (rss_data) {
-//       simpleRSSPreview(rss_data);
-//     },
-//     error: function () {
-//       $('#preview_div').html("Could not load preview")
-//     }
-//   });
-// }
-
-// function simpleRSSPreview(rss_data) {
-
-//   // Store all article entries and clear preview 
-//   articles = rss_data['responseData']['feed']['entries'];
-//   $('#preview_div').html();
-
-//   // Build rss preview for only a sample of article titles
-//   rss_preview = "<div><p style='font-weight: bold'>Found " + articles.length + " articles total</p></div>";
-//   for (var i = 0; i < Math.min(4, articles.length); i++) {
-//     rss_preview += "<div>" +
-//       "<p style='font-size: 14px; text-decoration: underline'>" + articles[i]['title'] + "</p>" +
-//       "<p>" + articles[i]['contentSnippet'] + "</p>" + "</div>";
-//   }
-//   $('#preview_div').html(rss_preview);
-// }
-
 function toggleSimpleRssConditionalInputs() {
   if ($('select#simple_rss_config_output_format').val() == 'xslt') {
     $('div#simple_rss_maxitems').hide();
@@ -45,10 +14,18 @@ function previewSimpleRss() {
     rss_url = $('input#simple_rss_config_url').val();
     output_format = $('select#simple_rss_config_output_format').val();
     max_items = $('input#simple_rss_config_max_items').val();
+    reverse_order = $('select#simple_rss_config_reverse_order').val();
+    xsl = $('textarea#simple_rss_config_xsl').val();
     if (max_items == '') {
       max_items = '0';
     }
-    $("#preview_div").load(url, { data: { url: rss_url, output_format: output_format, max_items: max_items }, type: 'SimpleRss' });
+    $("#preview_div").load(url, { data: { 
+      url: rss_url, 
+      output_format: output_format, 
+      max_items: max_items,
+      reverse_order: reverse_order,
+      xsl: xsl
+    }, type: 'SimpleRss' });
   }
 }
 
@@ -58,8 +35,13 @@ function initializeSimpleRssHandlers() {
     $('select#simple_rss_config_output_format').on('change', toggleSimpleRssConditionalInputs);
     toggleSimpleRssConditionalInputs();
 
-    // on change of url, display format, reverse_order, max items, and xsl
-    $('input#simple_rss_config_url').on('keyup', previewSimpleRss);
+    // on blur and change of url, display format, reverse_order, max items, and xsl
+    // not on keyup (poor man's debouncing technique?)
+    $('input#simple_rss_config_url').on('blur', previewSimpleRss);
+    $('select#simple_rss_config_output_format').on('change', previewSimpleRss);
+    $('input#simple_rss_config_max_items').on('blur', previewSimpleRss);
+    $('select#simple_rss_config_reverse_order').on('change', previewSimpleRss);
+    $('textarea#simple_rss_config_xsl').on('blur', previewSimpleRss);
 
     initializedSimpleRssHandlers = true;
   }
