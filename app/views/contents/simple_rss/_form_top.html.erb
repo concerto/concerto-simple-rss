@@ -5,7 +5,7 @@
     <div class="clearfix">
       <%= config.label :url %>
       <div class="input">
-        <%= config.url_field :url, :placeholder => 'http://feeds.bbci.co.uk/news/rss.xml', :class => "input-xxlarge", :value => @content.config['url'] %>
+        <%= config.url_field :url, :placeholder => 'http://feeds.bbci.co.uk/news/rss.xml', :class => "input-xxlarge", :value => @content.config['url'], "data-url" => preview_contents_path %>
         <div><small>You can verify an RSS feed at <a href="http://validator.w3.org/feed/" target="_blank">http://validator.w3.org/feed/</a></small></div>
       </div>
     </div>
