@@ -38,14 +38,61 @@ class SimpleRss < DynamicContent
         require 'rexml/document'
         require 'xml/xslt'
 
-        XML::XSLT.registerErrorHandler { |string| puts string }
+        #XML::XSLT.registerErrorHandler { |string| puts string }
         xslt = XML::XSLT.new()
-        xslt.xml = REXML::Document.new(raw)
-        xslt.xsl = REXML::Document.new(self.config['xsl'])
-        htmltext = HtmlText.new()
-        htmltext.name = "#{feed_title}"
-        htmltext.data = xslt.serve()
-        contents << htmltext
+        begin
+          xslt.xml = REXML::Document.new(raw)
+        rescue REXML::ParseException => e
+          Rails.logger.error("Unable to parse incoming feed: #{e.message}")
+          raise "Unable to parse incoming feed. "
+        rescue => e
+          raise e
+        end
+
+        begin
+          xslt.xsl = REXML::Document.new(self.config['xsl'])
+        rescue REXML::ParseException => e
+          Rails.logger.error("Unable to parse Xsl: #{e.message}")
+          # fmt is <rexml::parseexception: message :> trace ... so just pull out the message
+          s = e.message
+          msg_stop = s.index(">")
+          s = s.slice(23, msg_stop - 23) if !msg_stop.nil?
+          raise "Unable to parse Xsl.  #{s}"
+        rescue => e
+          raise e
+        end
+
+        data = xslt.serve()
+
+        # try to load the transformed data as an xml document so we can see if there are 
+        # mulitple content-items that we need to parse out, if we cant then treat it as one content item
+        begin
+          data_xml = REXML::Document.new('<root>' + data + '</root>')
+          nodes = REXML::XPath.match(data_xml, "//content-item")
+          # if there are no content-items then add the whole result (data) as one content
+          if nodes.count == 0
+            htmltext = HtmlText.new()
+            htmltext.name = "#{feed_title}"
+            htmltext.data = data
+            contents << htmltext
+          else
+            # if there are any content-items then add each one as a separate content
+            nodes.each do |n|
+              htmltext = HtmlText.new()
+              htmltext.name = "#{feed_title}"
+              htmltext.data = n.to_s
+              contents << htmltext
+            end
+          end
+        rescue => e
+          Rails.logger.error("unable to parse resultant xml, assuming it is one content item #{e.message}")
+          # raise "unable to parse resultant xml #{e.message}"
+          # add the whole result as one content
+          htmltext = HtmlText.new()
+          htmltext.name = "#{feed_title}"
+          htmltext.data = data
+          contents << htmltext
+        end
       else
         raise ArgumentError, 'Unexpected output format for RSS feed.'
       end
@@ -198,7 +245,7 @@ class SimpleRss < DynamicContent
       o.config['xsl'] = data[:xsl]
       results = o.build_content.first.data
     rescue => e
-      results = "Unable to preview #{e.message}"
+      results = "Unable to preview.  #{e.message}"
     end
 
     return results
