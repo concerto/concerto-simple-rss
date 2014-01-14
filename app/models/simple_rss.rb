@@ -62,6 +62,33 @@ class SimpleRss < DynamicContent
           raise e
         end
 
+        # add a replace [gsub] function for more powerful transforms.  You can use this in a transform
+        # by adding the bogus namespace http://concerto.functions
+        # A nodeset comes in as an array of REXML::Elements 
+        XML::XSLT.registerExtFunc("http://concerto.functions", "replace") do |nodes, pattern, replacement|
+          result = []
+          begin
+            # this will only work with nodesets for now
+            re_pattern = Regexp.new(pattern)
+            if nodes.is_a?(Array) && nodes.count > 0 && nodes.first.is_a?(REXML::Element)
+              nodes.each do |node|
+                s = node.to_s
+                r = s.gsub(re_pattern, replacement)
+                result << REXML::Document.new(r)
+              end
+            elsif nodes.is_a?(String)
+              result = nodes.gsub(re_pattern, replacement)
+            else
+              # dont know how to handle this
+Rails.logger.debug "I'm sorry, but the xsl external function replace does not know how to handle this type #{nodes.class}"
+            end
+          rescue
+            Rails.logger.debug "there was a problem replacing #{pattern} with #{replacement}"
+          end
+
+          result
+        end
+
         data = xslt.serve()
 
         # try to load the transformed data as an xml document so we can see if there are 
