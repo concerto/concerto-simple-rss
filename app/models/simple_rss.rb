@@ -80,10 +80,10 @@ class SimpleRss < DynamicContent
               result = nodes.gsub(re_pattern, replacement)
             else
               # dont know how to handle this
-Rails.logger.debug "I'm sorry, but the xsl external function replace does not know how to handle this type #{nodes.class}"
+              Rails.logger.info "I'm sorry, but the xsl external function replace does not know how to handle this type #{nodes.class}"
             end
           rescue
-            Rails.logger.debug "there was a problem replacing #{pattern} with #{replacement}"
+            Rails.logger.error "there was a problem replacing #{pattern} with #{replacement}"
           end
 
           result
