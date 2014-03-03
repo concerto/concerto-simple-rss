@@ -66,6 +66,8 @@ class SimpleRss < DynamicContent
         # by adding the bogus namespace http://concerto.functions
         # A nodeset comes in as an array of REXML::Elements 
         XML::XSLT.registerExtFunc("http://concerto.functions", "replace") do |nodes, pattern, replacement|
+Rails.logger.debug("pattern = #{pattern}")
+Rails.logger.debug("replacement = #{replacement}")
           result = []
           begin
             # this will only work with nodesets for now
@@ -82,8 +84,8 @@ class SimpleRss < DynamicContent
               # dont know how to handle this
               Rails.logger.info "I'm sorry, but the xsl external function replace does not know how to handle this type #{nodes.class}"
             end
-          rescue
-            Rails.logger.error "there was a problem replacing #{pattern} with #{replacement}"
+          rescue => e
+            Rails.logger.error "there was a problem replacing #{pattern} with #{replacement} - #{e.message}"
           end
 
           result
