@@ -106,10 +106,11 @@ Rails.logger.debug("replacement = #{replacement}")
             contents << htmltext
           else
             # if there are any content-items then add each one as a separate content
+            # and strip off the content-item wrapper
             nodes.each do |n|
               htmltext = HtmlText.new()
               htmltext.name = "#{feed_title}"
-              htmltext.data = n.to_s
+              htmltext.data = n.to_s.gsub(/^\s*\<content-item\>/, '').gsub(/\<\/content-item\>\s*$/,'')
               contents << htmltext
             end
           end
