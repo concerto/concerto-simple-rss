@@ -16,6 +16,7 @@ function previewSimpleRss() {
     max_items = $('input#simple_rss_config_max_items').val();
     reverse_order = $('select#simple_rss_config_reverse_order').val();
     xsl = $('textarea#simple_rss_config_xsl').val();
+    sanitize_tags = $('input#simple_rss_config_sanitize_tags').val();
     if (max_items == '') {
       max_items = '0';
     }
@@ -24,7 +25,8 @@ function previewSimpleRss() {
       output_format: output_format, 
       max_items: max_items,
       reverse_order: reverse_order,
-      xsl: xsl
+      xsl: xsl,
+      sanitize_tags: sanitize_tags
     }, type: 'SimpleRss' });
   }
 }
@@ -42,6 +44,7 @@ function initializeSimpleRssHandlers() {
     $('input#simple_rss_config_max_items').on('blur', previewSimpleRss);
     $('select#simple_rss_config_reverse_order').on('change', previewSimpleRss);
     $('textarea#simple_rss_config_xsl').on('blur', previewSimpleRss);
+    $('input#simple_rss_config_sanitize_tags').on('blur', previewSimpleRss);
 
     initializedSimpleRssHandlers = true;
   }

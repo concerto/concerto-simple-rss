@@ -33,5 +33,11 @@
         <%= config.text_area :xsl, :class => "span12", :rows =>4, :value => @content.config['xsl'] %>
       </div>
     </div>
+    <div class="clearfix" id="simple_rss_sanitize_tags">
+      <%= label_tooltip "simple_rss", :sanitize_tags, 'Blacklisted HTML Tags for Sanitization', :tip => "Whitelist includes #{[*ActionView::Base.sanitized_allowed_tags].join ' '}" %>
+      <div class="input">
+        <%= config.text_field :sanitize_tags, :class => "input-xxlarge", :placeholder => 'img a', :value => @content.config['sanitize_tags'] %>
+      </div>
+    </div>
   <% end %>
 </fieldset>
