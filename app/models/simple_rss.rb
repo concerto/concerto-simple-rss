@@ -66,28 +66,12 @@ class SimpleRss < DynamicContent
         # by adding the bogus namespace http://concerto.functions
         # A nodeset comes in as an array of REXML::Elements 
         XML::XSLT.registerExtFunc("http://concerto.functions", "replace") do |nodes, pattern, replacement|
-          #Rails.logger.debug("pattern = #{pattern}")
-          #Rails.logger.debug("replacement = #{replacement}")
-          result = []
-          begin
-            # this will only work with nodesets for now
-            re_pattern = Regexp.new(pattern)
-            if nodes.is_a?(Array) && nodes.count > 0 && nodes.first.is_a?(REXML::Element)
-              nodes.each do |node|
-                s = node.to_s
-                r = s.gsub(re_pattern, replacement)
-                result << REXML::Document.new(r)
-              end
-            elsif nodes.is_a?(String)
-              result = nodes.gsub(re_pattern, replacement)
-            else
-              # dont know how to handle this
-              Rails.logger.info "I'm sorry, but the xsl external function replace does not know how to handle this type #{nodes.class}"
-            end
-          rescue => e
-            Rails.logger.error "there was a problem replacing #{pattern} with #{replacement} - #{e.message}"
-          end
+          result = xslt_replace(nodes, pattern, replacement)
+          result
+        end
 
+        XML::XSLT.registerExtFunc("http://schemas.concerto-signage.org/functions", "replace") do |nodes, pattern, replacement|
+          result = xslt_replace(nodes, pattern, replacement)
           result
         end
 
@@ -133,6 +117,32 @@ class SimpleRss < DynamicContent
 
     return contents
   end
+
+  def xslt_replace(nodes, pattern, replacement)
+    #Rails.logger.debug("pattern = #{pattern}")
+    #Rails.logger.debug("replacement = #{replacement}")
+    result = []
+    begin
+      # this will only work with nodesets for now
+      re_pattern = Regexp.new(pattern)
+      if nodes.is_a?(Array) && nodes.count > 0 && nodes.first.is_a?(REXML::Element)
+        nodes.each do |node|
+          s = node.to_s
+          r = s.gsub(re_pattern, replacement)
+          result << REXML::Document.new(r)
+        end
+      elsif nodes.is_a?(String)
+        result = nodes.gsub(re_pattern, replacement)
+      else
+        # dont know how to handle this
+        Rails.logger.info "I'm sorry, but the xsl external function replace does not know how to handle this type #{nodes.class}"
+      end
+    rescue => e
+      Rails.logger.error "there was a problem replacing #{pattern} with #{replacement} - #{e.message}"
+    end
+
+    result
+  end    
 
   # fetch the feed, return the type, title, and contents (parsed) and raw feed (unparsed)
   def fetch_feed(url)
