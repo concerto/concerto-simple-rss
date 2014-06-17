@@ -24,14 +24,14 @@ class SimpleRss < DynamicContent
         feed_items.each_slice(5).with_index do |items, index|
           htmltext = HtmlText.new()
           htmltext.name = "#{feed_title} (#{index+1})"
-          htmltext.data = "<h1>#{feed_title}</h1> #{items_to_html(items, type)}"
+          htmltext.data = sanitize("<h1>#{feed_title}</h1> #{items_to_html(items, type)}")
           contents << htmltext
         end
       when 'detailed'
         feed_items.each_with_index do |item, index|
           htmltext = HtmlText.new()
           htmltext.name = "#{feed_title} (#{index+1})"
-          htmltext.data = item_to_html(item, type)
+          htmltext.data = sanitize(item_to_html(item, type))
           contents << htmltext
         end
       when 'xslt'
@@ -66,8 +66,8 @@ class SimpleRss < DynamicContent
         # by adding the bogus namespace http://concerto.functions
         # A nodeset comes in as an array of REXML::Elements 
         XML::XSLT.registerExtFunc("http://concerto.functions", "replace") do |nodes, pattern, replacement|
-Rails.logger.debug("pattern = #{pattern}")
-Rails.logger.debug("replacement = #{replacement}")
+          #Rails.logger.debug("pattern = #{pattern}")
+          #Rails.logger.debug("replacement = #{replacement}")
           result = []
           begin
             # this will only work with nodesets for now
@@ -102,7 +102,7 @@ Rails.logger.debug("replacement = #{replacement}")
           if nodes.count == 0
             htmltext = HtmlText.new()
             htmltext.name = "#{feed_title}"
-            htmltext.data = data
+            htmltext.data = sanitize(data)
             contents << htmltext
           else
             # if there are any content-items then add each one as a separate content
@@ -110,7 +110,7 @@ Rails.logger.debug("replacement = #{replacement}")
             nodes.each do |n|
               htmltext = HtmlText.new()
               htmltext.name = "#{feed_title}"
-              htmltext.data = n.to_s.gsub(/^\s*\<content-item\>/, '').gsub(/\<\/content-item\>\s*$/,'')
+              htmltext.data = sanitize(n.to_s.gsub(/^\s*\<content-item\>/, '').gsub(/\<\/content-item\>\s*$/,''))
               contents << htmltext
             end
           end
@@ -120,7 +120,7 @@ Rails.logger.debug("replacement = #{replacement}")
           # add the whole result as one content
           htmltext = HtmlText.new()
           htmltext.name = "#{feed_title}"
-          htmltext.data = data
+          htmltext.data = sanitize(data)
           contents << htmltext
         end
       else
@@ -212,7 +212,7 @@ Rails.logger.debug("replacement = #{replacement}")
   # Simple RSS processing needs a feed URL and the format of the output content.
   def self.form_attributes
     attributes = super()
-    attributes.concat([:config => [:url, :output_format, :reverse_order, :max_items, :xsl]])
+    attributes.concat([:config => [:url, :output_format, :reverse_order, :max_items, :xsl, :sanitize_tags]])
   end
 
   # if the feed is valid we store the title in config
@@ -273,12 +273,23 @@ Rails.logger.debug("replacement = #{replacement}")
       o.config['max_items'] = data[:max_items]
       o.config['reverse_order'] = data[:reverse_order]
       o.config['xsl'] = data[:xsl]
+      o.config['sanitize_tags'] = data[:sanitize_tags]
       results = o.build_content.first.data
     rescue => e
       results = "Unable to preview.  #{e.message}"
     end
 
     return results
+  end
+
+  def sanitize(html)
+    if self.config.include?('sanitize_tags') and !self.config['sanitize_tags'].empty?
+      whitelist = ActionView::Base.sanitized_allowed_tags 
+      blacklist = self.config['sanitize_tags'].split(" ")
+
+      html = ActionController::Base.helpers.sanitize(html, :tags => (whitelist - blacklist))
+    end
+    html
   end
 
 end
