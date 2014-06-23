@@ -198,7 +198,10 @@ class SimpleRss < DynamicContent
       # contents without it being html encoded.  most likely a prime candidate for optimizing
       require 'rexml/document'
       entry_xml = REXML::Document.new(item.to_s)
-      content_html = REXML::XPath.first(entry_xml, "entry/content").text
+      content_html = ""
+      if (first = REXML::XPath.first(entry_xml, "entry/content"))
+        content_html = first.text
+      end
 
       description = (item.summary.nil? ? content_html : item.summary.content)
     end
