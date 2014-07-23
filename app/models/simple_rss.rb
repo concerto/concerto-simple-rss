@@ -99,13 +99,28 @@ class SimpleRss < DynamicContent
             end
           end
         rescue => e
-          Rails.logger.error("unable to parse resultant xml, assuming it is one content item #{e.message}")
-          # raise "unable to parse resultant xml #{e.message}"
-          # add the whole result as one content
-          htmltext = HtmlText.new()
-          htmltext.name = "#{feed_title}"
-          htmltext.data = sanitize(data)
-          contents << htmltext
+          # maybe the html was not xml compliant-- this happens frequently in rss feed descriptions
+          # look for another separator and use it, if it exists
+
+          if data.include?("###end-of-content-item")
+            # if there are any content-items then add each one as a separate content
+            # and strip off the content-item wrapper
+            data.split("###end-of-content-item").each do |n|
+              htmltext = HtmlText.new()
+              htmltext.name = "#{feed_title}"
+              htmltext.data = sanitize(n)
+              contents << htmltext if !htmltext.data.strip.blank?
+            end
+
+          else
+            Rails.logger.error("unable to parse resultant xml, assuming it is one content item #{e.message}")
+            # raise "unable to parse resultant xml #{e.message}"
+            # add the whole result as one content
+            htmltext = HtmlText.new()
+            htmltext.name = "#{feed_title}"
+            htmltext.data = sanitize(data)
+            contents << htmltext
+          end
         end
       else
         raise ArgumentError, 'Unexpected output format for RSS feed.'
