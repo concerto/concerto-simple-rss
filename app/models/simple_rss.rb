@@ -102,13 +102,13 @@ class SimpleRss < DynamicContent
           # maybe the html was not xml compliant-- this happens frequently in rss feed descriptions
           # look for another separator and use it, if it exists
 
-          if data.include?("###end-of-content-item")
+          if data.include?("</content-item>")
             # if there are any content-items then add each one as a separate content
             # and strip off the content-item wrapper
-            data.split("###end-of-content-item").each do |n|
+            data.split("</content-item>").each do |n|
               htmltext = HtmlText.new()
               htmltext.name = "#{feed_title}"
-              htmltext.data = sanitize(n)
+              htmltext.data = sanitize(n.sub("<content-item>", ""))
               contents << htmltext if !htmltext.data.strip.blank?
             end
 
