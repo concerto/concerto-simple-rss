@@ -139,7 +139,7 @@ class SimpleRss < DynamicContent
     result = []
     begin
       # this will only work with nodesets for now
-      re_pattern = Regexp.new(pattern)
+      re_pattern = Regexp.new(pattern, Regexp::MULTILINE)
       if nodes.is_a?(Array) && nodes.count > 0 && nodes.first.is_a?(REXML::Element)
         nodes.each do |node|
           s = node.to_s
