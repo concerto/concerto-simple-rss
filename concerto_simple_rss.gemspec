@@ -19,5 +19,4 @@ Gem::Specification.new do |s|
 
   s.add_dependency "rails"
   s.add_dependency "ruby-xslt", "~> 0.9"
-=
 end
