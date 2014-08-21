@@ -76,6 +76,8 @@ class SimpleRss < DynamicContent
         end
 
         data = xslt.serve()
+        # xslt.serve does always return a string with ASCII-8BIT encoding regardless of what the actual encoding is
+        data = data.force_encoding(xslt.xml.encoding) if data
 
         # try to load the transformed data as an xml document so we can see if there are 
         # mulitple content-items that we need to parse out, if we cant then treat it as one content item
@@ -162,7 +164,7 @@ class SimpleRss < DynamicContent
   # fetch the feed, return the type, title, and contents (parsed) and raw feed (unparsed)
   def fetch_feed(url)
     require 'rss'
-    require 'net/http'
+    require 'open-uri'
 
     type = 'UNKNOWN'
     title = ''
@@ -172,11 +174,7 @@ class SimpleRss < DynamicContent
     begin
       # cache same url for 1 minute to alleviate redundant calls when previewing
       feed = Rails.cache.fetch(url, :expires_in => 1.minute) do
-        uri = URI.parse(url)
-        http = Net::HTTP.new(uri.host, uri.port)
-        http.use_ssl = uri.scheme == 'https'
-        request = Net::HTTP::Get.new(uri.request_uri)
-        http.request(request).body
+        open(url).read()
       end
 
       rss = RSS::Parser.parse(feed, false, true)
