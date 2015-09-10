@@ -300,7 +300,9 @@ class SimpleRss < DynamicContent
       o.config['reverse_order'] = data[:reverse_order]
       o.config['xsl'] = data[:xsl]
       o.config['sanitize_tags'] = data[:sanitize_tags]
-      results = o.build_content.first.data
+
+      content = o.build_content
+      results = content.first.data unless content.blank?
     rescue => e
       results = "Unable to preview.  #{e.message}"
     end
