@@ -4,11 +4,47 @@ class SimpleRss < DynamicContent
 
   validate :validate_config, :validate_feed
 
+  # Load a configuration hash.
+  # Converts the JSON data stored for the content into the configuration.
+  # Called during `after_find`.
+  def load_config
+    j = JSON.load(self.data)
+    # decrypt fields
+Rails.logger.debug("--------------------------- rss decrypting ")
+
+    j[:url_userid] = (j[:url_userid_enc].blank? ? "" : j[:url_userid_enc].decrypt)
+    j[:url_password] = (j[:url_password_enc].blank? ? "" : j[:url_password_enc].decrypt)
+    j.delete :url_userid_enc
+    j.delete :url_password_enc
+
+    self.config = j
+Rails.logger.debug("--------------------------- rss decrypting done")
+  end
+
+  # Prepare the configuration to be saved.
+  # Compress the config hash back into JSON to be stored in the database.
+  # Called during `before_validation`.
+  def save_config
+    j = JSON.load(JSON.dump(self.config))
+    # encrypt fields
+Rails.logger.debug("--------------------------- rss encrypting ")
+
+    j[:url_userid_enc] = (j[:url_userid].blank? ? "" : j[:url_userid].encrypt)
+    j[:url_password_enc] = (j[:url_password].blank? ? "" : j[:url_password].encrypt)
+    j.delete :url_userid
+    j.delete :url_password
+
+    self.data = JSON.dump(j)
+Rails.logger.debug("--------------------------- rss encrypting done")
+  end
+
   def build_content
     contents = []
 
     url = self.config['url']
-    type, feed_title, rss, raw = fetch_feed(url)
+    url_userid = self.config['url_userid']
+    url_password = self.config['url_password']
+    type, feed_title, rss, raw = fetch_feed(url, url_userid, url_password)
     
     if (["RSS", "ATOM"].include? type) && !feed_title.blank?
       # it is a valid feed
@@ -164,7 +200,8 @@ class SimpleRss < DynamicContent
   end    
 
   # fetch the feed, return the type, title, and contents (parsed) and raw feed (unparsed)
-  def fetch_feed(url)
+  def fetch_feed(url, url_userid, url_password)
+    require 'encryptor'
     require 'rss'
     require 'open-uri'
 
@@ -176,7 +213,11 @@ class SimpleRss < DynamicContent
     begin
       # cache same url for 1 minute to alleviate redundant calls when previewing
       feed = Rails.cache.fetch(url, :expires_in => 1.minute) do
-        open(url).read()
+        if url_userid.blank? or url_password.blank?
+          open(url).read()
+        else
+          open(url, http_basic_authentication: [url_userid, url_password]).read()
+        end
       end
 
       rss = RSS::Parser.parse(feed, false, true)
@@ -241,16 +282,18 @@ class SimpleRss < DynamicContent
   # Simple RSS processing needs a feed URL and the format of the output content.
   def self.form_attributes
     attributes = super()
-    attributes.concat([:config => [:url, :output_format, :reverse_order, :max_items, :xsl, :sanitize_tags]])
+    attributes.concat([:config => [:url, :url_userid, :url_password, :output_format, :reverse_order, :max_items, :xsl, :sanitize_tags]])
   end
 
   # if the feed is valid we store the title in config
   def validate_feed
     url = self.config['url']
+    url_userid = self.config['url_userid']
+    url_password = self.config['url_password']
     unless url.blank? 
-      Rails.logger.debug("looking up feed title for #{url}")    
+      Rails.logger.debug("looking up feed title for #{url}")
 
-      type, title = fetch_feed(url)
+      type, title = fetch_feed(url, url_userid, url_password)
       if (["RSS", "ATOM"].include? type) && !title.blank?
         self.config['title'] = title
       else
@@ -273,11 +316,13 @@ class SimpleRss < DynamicContent
         errors.add(:base, "XSL Markup can't be blank when using the XSLT Display Format")
       else
         url = self.config['url']
+        url_userid = self.config['url_userid']
+        url_password = self.config['url_password']
         unless url.blank? 
           require 'rexml/document'
           require 'xml/xslt'
 
-          type, title, rss, raw = fetch_feed(url)
+          type, title, rss, raw = fetch_feed(url, url_userid, url_password)
           if ["RSS", "ATOM"].include? type
             begin
               xslt = XML::XSLT.new()
@@ -298,6 +343,8 @@ class SimpleRss < DynamicContent
     begin
       o = SimpleRss.create()
       o.config['url'] = data[:url]
+      o.config['url_userid'] = data[:url_userid]
+      o.config['url_password'] = data[:url_password]
       o.config['output_format'] = data[:output_format]
       o.config['max_items'] = data[:max_items]
       o.config['reverse_order'] = data[:reverse_order]
