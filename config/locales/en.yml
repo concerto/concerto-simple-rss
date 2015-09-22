@@ -1,0 +1,7 @@
+en:
+  activerecord:
+    attributes:
+      simple_rss:
+        config_url_userid: "Basic Auth Id"
+        config_url_password: "Password"
+  basic_auth_tip: "Leave the User Id and Password blank if the URL does not require Basic HTTP Authentication."
