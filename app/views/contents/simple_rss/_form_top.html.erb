@@ -6,9 +6,26 @@
       <%= config.label :url %>
       <div class="input">
         <%= config.url_field :url, :placeholder => 'http://feeds.bbci.co.uk/news/rss.xml', :class => "input-xxlarge", :value => @content.config['url'], "data-url" => preview_contents_path %>
-        <div><small>You can verify an RSS feed at <a href="http://validator.w3.org/feed/" target="_blank">http://validator.w3.org/feed/</a></small></div>
       </div>
     </div>
+
+    <div class="row-fluid">
+      <div class="span6">
+        <div class="clearfix span6">
+          <%= label_tooltip "simple_rss", :url_userid, t("activerecord.attributes.simple_rss.config_url_userid"), tip: t("basic_auth_tip") %>
+          <div class="input">
+            <%= config.text_field :url_userid, :class => "input-medium", autocomplete: :off %>
+          </div>
+        </div>
+        <div class="clearfix span6">
+          <%= config.label :url_password, t("activerecord.attributes.simple_rss.config_url_password") %>
+          <div class="input">
+            <%= config.password_field :url_password, :class => "input-medium", autocomplete: :off %>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="clearfix">
       <%= config.label :output_format, 'Display Format' %>
       <div class="input">

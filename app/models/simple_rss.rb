@@ -1,139 +1,176 @@
 class SimpleRss < DynamicContent
+  require 'base64'
 
   DISPLAY_NAME = 'RSS Feed'
 
   validate :validate_config, :validate_feed
 
+  # Load a configuration hash.
+  # Converts the JSON data stored for the content into the configuration.
+  # Called during `after_find`.
+  def load_config
+    j = JSON.load(self.data)
+    
+    # decrypt fields
+    unless j.blank?
+      encrypted_userid = Base64.decode64(j['url_userid_enc']) unless j['url_userid_enc'].blank?
+      encrypted_password = Base64.decode64(j['url_password_enc']) unless j['url_password_enc'].blank?
+
+      j['url_userid'] = (encrypted_userid.blank? ? "" : encrypted_userid.decrypt)
+      j['url_password'] = (encrypted_password.blank? ? "" : encrypted_password.decrypt)
+    end 
+
+    self.config = j
+  end
+
+  # Prepare the configuration to be saved.
+  # Compress the config hash back into JSON to be stored in the database.
+  # Called during `before_validation`.
+  def save_config
+    j = self.config.deep_dup
+
+    # encrypt fields
+    j['url_userid_enc'] = (j['url_userid'].blank? ? "" : Base64.encode64(j['url_userid'].encrypt))
+    j['url_password_enc'] = (j['url_password'].blank? ? "" : Base64.encode64(j['url_password'].encrypt))
+    j.delete 'url_userid'
+    j.delete 'url_password'
+    self.data = JSON.dump(j)
+  end
+
   def build_content
     contents = []
 
     url = self.config['url']
-    type, feed_title, rss, raw = fetch_feed(url)
-    
-    if (["RSS", "ATOM"].include? type) && !feed_title.blank?
-      # it is a valid feed
-      if !self.config['reverse_order'].blank? && self.config['reverse_order'] == '1'
-        rss.items.reverse!
-      end
-      feed_items = rss.items
-      if !self.config['max_items'].blank? && self.config['max_items'].to_i > 0
-        feed_items = feed_items.first(self.config['max_items'].to_i)
-      end
-      case self.config['output_format']
-      when 'headlines'
-        feed_items.each_slice(5).with_index do |items, index|
-          htmltext = HtmlText.new()
-          htmltext.name = "#{feed_title} (#{index+1})"
-          htmltext.data = sanitize("<h1>#{feed_title}</h1> #{items_to_html(items, type)}")
-          contents << htmltext
+    unless url.blank?
+      url_userid = self.config['url_userid']
+      url_password = self.config['url_password']
+      type, feed_title, rss, raw = fetch_feed(url, url_userid, url_password)
+      
+      if (["RSS", "ATOM"].include? type) && !feed_title.blank?
+        # it is a valid feed
+        if !self.config['reverse_order'].blank? && self.config['reverse_order'] == '1'
+          rss.items.reverse!
         end
-      when 'detailed'
-        feed_items.each_with_index do |item, index|
-          htmltext = HtmlText.new()
-          htmltext.name = "#{feed_title} (#{index+1})"
-          htmltext.data = sanitize(item_to_html(item, type))
-          contents << htmltext
+        feed_items = rss.items
+        if !self.config['max_items'].blank? && self.config['max_items'].to_i > 0
+          feed_items = feed_items.first(self.config['max_items'].to_i)
         end
-      when 'xslt'
-        require 'rexml/document'
-        require 'xml/xslt'
-
-        #XML::XSLT.registerErrorHandler { |string| puts string }
-        xslt = XML::XSLT.new()
-        begin
-          xslt.xml = REXML::Document.new(raw)
-        rescue REXML::ParseException => e
-          Rails.logger.error("Unable to parse incoming feed: #{e.message}")
-          raise "Unable to parse incoming feed. "
-        rescue => e
-          raise e
-        end
-
-        begin
-          xslt.xsl = REXML::Document.new(self.config['xsl'])
-        rescue REXML::ParseException => e
-          Rails.logger.error("Unable to parse Xsl: #{e.message}")
-          # fmt is <rexml::parseexception: message :> trace ... so just pull out the message
-          s = e.message
-          msg_stop = s.index(">")
-          s = s.slice(23, msg_stop - 23) if !msg_stop.nil?
-          raise "Unable to parse Xsl.  #{s}"
-        rescue => e
-          raise e
-        end
-
-        # add a replace [gsub] function for more powerful transforms.  You can use this in a transform
-        # by adding the bogus namespace http://concerto.functions
-        # A nodeset comes in as an array of REXML::Elements 
-        XML::XSLT.registerExtFunc("http://concerto.functions", "replace") do |nodes, pattern, replacement|
-          result = xslt_replace(nodes, pattern, replacement)
-          result
-        end
-
-        XML::XSLT.registerExtFunc("http://schemas.concerto-signage.org/functions", "replace") do |nodes, pattern, replacement|
-          result = xslt_replace(nodes, pattern, replacement)
-          result
-        end
-
-        data = xslt.serve()
-        # xslt.serve does always return a string with ASCII-8BIT encoding regardless of what the actual encoding is
-        data = data.force_encoding(xslt.xml.encoding) if data
-
-        # try to load the transformed data as an xml document so we can see if there are 
-        # mulitple content-items that we need to parse out, if we cant then treat it as one content item
-        begin
-          data_xml = REXML::Document.new('<root>' + data + '</root>')
-          nodes = REXML::XPath.match(data_xml, "//content-item")
-          # if there are no content-items then add the whole result (data) as one content
-          if nodes.count == 0
+        case self.config['output_format']
+        when 'headlines'
+          feed_items.each_slice(5).with_index do |items, index|
             htmltext = HtmlText.new()
-            htmltext.name = "#{feed_title}"
-            htmltext.data = sanitize(data)
+            htmltext.name = "#{feed_title} (#{index+1})"
+            htmltext.data = sanitize("<h1>#{feed_title}</h1> #{items_to_html(items, type)}")
             contents << htmltext
-          else
-            # if there are any content-items then add each one as a separate content
-            # and strip off the content-item wrapper
-            nodes.each do |n|
+          end
+        when 'detailed'
+          feed_items.each_with_index do |item, index|
+            htmltext = HtmlText.new()
+            htmltext.name = "#{feed_title} (#{index+1})"
+            htmltext.data = sanitize(item_to_html(item, type))
+            contents << htmltext
+          end
+        when 'xslt'
+          require 'rexml/document'
+          require 'xml/xslt'
+
+          #XML::XSLT.registerErrorHandler { |string| puts string }
+          xslt = XML::XSLT.new()
+          begin
+            xslt.xml = REXML::Document.new(raw)
+          rescue REXML::ParseException => e
+            Rails.logger.error("Unable to parse incoming feed: #{e.message}")
+            raise "Unable to parse incoming feed. "
+          rescue => e
+            raise e
+          end
+
+          begin
+            xslt.xsl = REXML::Document.new(self.config['xsl'])
+          rescue REXML::ParseException => e
+            Rails.logger.error("Unable to parse Xsl: #{e.message}")
+            # fmt is <rexml::parseexception: message :> trace ... so just pull out the message
+            s = e.message
+            msg_stop = s.index(">")
+            s = s.slice(23, msg_stop - 23) if !msg_stop.nil?
+            raise "Unable to parse Xsl.  #{s}"
+          rescue => e
+            raise e
+          end
+
+          # add a replace [gsub] function for more powerful transforms.  You can use this in a transform
+          # by adding the bogus namespace http://concerto.functions
+          # A nodeset comes in as an array of REXML::Elements 
+          XML::XSLT.registerExtFunc("http://concerto.functions", "replace") do |nodes, pattern, replacement|
+            result = xslt_replace(nodes, pattern, replacement)
+            result
+          end
+
+          XML::XSLT.registerExtFunc("http://schemas.concerto-signage.org/functions", "replace") do |nodes, pattern, replacement|
+            result = xslt_replace(nodes, pattern, replacement)
+            result
+          end
+
+          data = xslt.serve()
+          # xslt.serve does always return a string with ASCII-8BIT encoding regardless of what the actual encoding is
+          data = data.force_encoding(xslt.xml.encoding) if data
+
+          # try to load the transformed data as an xml document so we can see if there are 
+          # mulitple content-items that we need to parse out, if we cant then treat it as one content item
+          begin
+            data_xml = REXML::Document.new('<root>' + data + '</root>')
+            nodes = REXML::XPath.match(data_xml, "//content-item")
+            # if there are no content-items then add the whole result (data) as one content
+            if nodes.count == 0
               htmltext = HtmlText.new()
               htmltext.name = "#{feed_title}"
-              htmltext.data = sanitize(n.to_s.gsub(/^\s*\<content-item\>/, '').gsub(/\<\/content-item\>\s*$/,''))
+              htmltext.data = sanitize(data)
+              contents << htmltext
+            else
+              # if there are any content-items then add each one as a separate content
+              # and strip off the content-item wrapper
+              nodes.each do |n|
+                htmltext = HtmlText.new()
+                htmltext.name = "#{feed_title}"
+                htmltext.data = sanitize(n.to_s.gsub(/^\s*\<content-item\>/, '').gsub(/\<\/content-item\>\s*$/,''))
+                contents << htmltext
+              end
+            end
+          rescue => e
+            # maybe the html was not xml compliant-- this happens frequently in rss feed descriptions
+            # look for another separator and use it, if it exists
+
+            if data.include?("</content-item>")
+              # if there are any content-items then add each one as a separate content
+              # and strip off the content-item wrapper
+              data.split("</content-item>").each do |n|
+                htmltext = HtmlText.new()
+                htmltext.name = "#{feed_title}"
+                htmltext.data = sanitize(n.sub("<content-item>", ""))
+                contents << htmltext if !htmltext.data.strip.blank?
+              end
+
+            else
+              Rails.logger.error("unable to parse resultant xml, assuming it is one content item #{e.message}")
+              # raise "unable to parse resultant xml #{e.message}"
+              # add the whole result as one content
+              htmltext = HtmlText.new()
+              htmltext.name = "#{feed_title}"
+              htmltext.data = sanitize(data)
               contents << htmltext
             end
           end
-        rescue => e
-          # maybe the html was not xml compliant-- this happens frequently in rss feed descriptions
-          # look for another separator and use it, if it exists
-
-          if data.include?("</content-item>")
-            # if there are any content-items then add each one as a separate content
-            # and strip off the content-item wrapper
-            data.split("</content-item>").each do |n|
-              htmltext = HtmlText.new()
-              htmltext.name = "#{feed_title}"
-              htmltext.data = sanitize(n.sub("<content-item>", ""))
-              contents << htmltext if !htmltext.data.strip.blank?
-            end
-
-          else
-            Rails.logger.error("unable to parse resultant xml, assuming it is one content item #{e.message}")
-            # raise "unable to parse resultant xml #{e.message}"
-            # add the whole result as one content
-            htmltext = HtmlText.new()
-            htmltext.name = "#{feed_title}"
-            htmltext.data = sanitize(data)
-            contents << htmltext
-          end
+        else
+          raise ArgumentError, 'Unexpected output format for RSS feed.'
         end
+      elsif type == "ERROR"
+        raise rss
       else
-        raise ArgumentError, 'Unexpected output format for RSS feed.'
+        Rails.logger.error("could not fetch #{type} feed for #{feed_title} at #{url}")
+        raise "Unexpected feed format for #{url}."
       end
-    elsif type == "ERROR"
-      raise rss
-    else
-      Rails.logger.error("could not fetch #{type} feed for #{feed_title} at #{url}")
-      raise "Unexpected feed format for #{url}."
     end
-
+    
     return contents
   end
 
@@ -164,7 +201,8 @@ class SimpleRss < DynamicContent
   end    
 
   # fetch the feed, return the type, title, and contents (parsed) and raw feed (unparsed)
-  def fetch_feed(url)
+  def fetch_feed(url, url_userid, url_password)
+    require 'encryptor'
     require 'rss'
     require 'open-uri'
 
@@ -173,29 +211,35 @@ class SimpleRss < DynamicContent
     rss = nil
     feed = nil
 
-    begin
-      # cache same url for 1 minute to alleviate redundant calls when previewing
-      feed = Rails.cache.fetch(url, :expires_in => 1.minute) do
-        open(url).read()
-      end
+    unless url.blank?
+      begin
+        # cache same url for 1 minute to alleviate redundant calls when previewing
+        feed = Rails.cache.fetch(url, :expires_in => 1.minute) do
+          if url_userid.blank? or url_password.blank?
+            open(url).read()
+          else
+            open(url, http_basic_authentication: [url_userid, url_password]).read()
+          end
+        end
 
-      rss = RSS::Parser.parse(feed, false, true)
-      raise "feed could not be parsed" if rss.nil?
-    rescue => e
-      # cant parse rss or url is bad
-      Rails.logger.debug("unable to fetch or parse feed - #{url}, #{e.message}")
-      rss = e.message
-      type = "ERROR"
-    else
-      type = rss.feed_type.upcase
-
-      case type
-      when "RSS"
-        title = rss.channel.title
-      when "ATOM"
-        title = rss.title.content
+        rss = RSS::Parser.parse(feed, false, true)
+        raise "feed could not be parsed" if rss.nil?
+      rescue => e
+        # cant parse rss or url is bad
+        Rails.logger.debug("unable to fetch or parse feed - #{url}, #{e.message}")
+        rss = e.message
+        type = "ERROR"
       else
-        #title = "unknown feed type"
+        type = rss.feed_type.upcase
+
+        case type
+        when "RSS"
+          title = rss.channel.title
+        when "ATOM"
+          title = rss.title.content
+        else
+          #title = "unknown feed type"
+        end
       end
     end
 
@@ -241,16 +285,18 @@ class SimpleRss < DynamicContent
   # Simple RSS processing needs a feed URL and the format of the output content.
   def self.form_attributes
     attributes = super()
-    attributes.concat([:config => [:url, :output_format, :reverse_order, :max_items, :xsl, :sanitize_tags]])
+    attributes.concat([:config => [:url, :url_userid, :url_password, :output_format, :reverse_order, :max_items, :xsl, :sanitize_tags]])
   end
 
   # if the feed is valid we store the title in config
   def validate_feed
     url = self.config['url']
+    url_userid = self.config['url_userid']
+    url_password = self.config['url_password']
     unless url.blank? 
-      Rails.logger.debug("looking up feed title for #{url}")    
+      Rails.logger.debug("looking up feed title for #{url}")
 
-      type, title = fetch_feed(url)
+      type, title = fetch_feed(url, url_userid, url_password)
       if (["RSS", "ATOM"].include? type) && !title.blank?
         self.config['title'] = title
       else
@@ -273,11 +319,13 @@ class SimpleRss < DynamicContent
         errors.add(:base, "XSL Markup can't be blank when using the XSLT Display Format")
       else
         url = self.config['url']
+        url_userid = self.config['url_userid']
+        url_password = self.config['url_password']
         unless url.blank? 
           require 'rexml/document'
           require 'xml/xslt'
 
-          type, title, rss, raw = fetch_feed(url)
+          type, title, rss, raw = fetch_feed(url, url_userid, url_password)
           if ["RSS", "ATOM"].include? type
             begin
               xslt = XML::XSLT.new()
@@ -298,6 +346,8 @@ class SimpleRss < DynamicContent
     begin
       o = SimpleRss.create()
       o.config['url'] = data[:url]
+      o.config['url_userid'] = data[:url_userid]
+      o.config['url_password'] = data[:url_password]
       o.config['output_format'] = data[:output_format]
       o.config['max_items'] = data[:max_items]
       o.config['reverse_order'] = data[:reverse_order]
