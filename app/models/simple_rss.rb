@@ -125,7 +125,7 @@ class SimpleRss < DynamicContent
               htmltext = HtmlText.new()
               htmltext.name = "#{feed_title}"
               htmltext.data = sanitize(data)
-              contents << htmltext
+              contents << htmltext if !htmltext.data.blank?
             else
               # if there are any content-items then add each one as a separate content
               # and strip off the content-item wrapper
@@ -133,21 +133,21 @@ class SimpleRss < DynamicContent
                 htmltext = HtmlText.new()
                 htmltext.name = "#{feed_title}"
                 htmltext.data = sanitize(n.to_s.gsub(/^\s*\<content-item\>/, '').gsub(/\<\/content-item\>\s*$/,''))
-                contents << htmltext
+                contents << htmltext if !htmltext.data.blank?
               end
             end
           rescue => e
             # maybe the html was not xml compliant-- this happens frequently in rss feed descriptions
             # look for another separator and use it, if it exists
 
-            if data.include?("</content-item>")
+            if data.present? and data.include?("</content-item>")
               # if there are any content-items then add each one as a separate content
               # and strip off the content-item wrapper
               data.split("</content-item>").each do |n|
                 htmltext = HtmlText.new()
                 htmltext.name = "#{feed_title}"
-                htmltext.data = sanitize(n.sub("<content-item>", ""))
-                contents << htmltext if !htmltext.data.strip.blank?
+                htmltext.data = sanitize(n.sub("<content-item>", "")) 
+                contents << htmltext if !htmltext.data.blank?
               end
 
             else
@@ -157,7 +157,7 @@ class SimpleRss < DynamicContent
               htmltext = HtmlText.new()
               htmltext.name = "#{feed_title}"
               htmltext.data = sanitize(data)
-              contents << htmltext
+              contents << htmltext if !htmltext.data.blank?
             end
           end
         else
