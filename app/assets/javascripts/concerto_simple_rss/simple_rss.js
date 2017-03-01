@@ -56,5 +56,4 @@ function initializeSimpleRssHandlers() {
   }
 }
 
-$(document).ready(initializeSimpleRssHandlers);
-$(document).on('page:change', initializeSimpleRssHandlers);
+$(document).on('turbolinks:load', initializeSimpleRssHandlers);
