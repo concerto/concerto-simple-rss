@@ -10,15 +10,15 @@ class SimpleRss < DynamicContent
   # Called during `after_find`.
   def load_config
     j = JSON.load(self.data)
-    
+
     # decrypt fields
     unless j.blank?
       encrypted_userid = Base64.decode64(j['url_userid_enc']) unless j['url_userid_enc'].blank?
       encrypted_password = Base64.decode64(j['url_password_enc']) unless j['url_password_enc'].blank?
 
-      j['url_userid'] = (encrypted_userid.blank? ? "" : encrypted_userid.decrypt)
-      j['url_password'] = (encrypted_password.blank? ? "" : encrypted_password.decrypt)
-    end 
+      j['url_userid'] = (encrypted_userid.blank? ? "" : Encryptor.decrypt(encrypted_userid))
+      j['url_password'] = (encrypted_password.blank? ? "" : Encryptor.decrypt(encrypted_password))
+    end
 
     self.config = j
   end
@@ -30,8 +30,8 @@ class SimpleRss < DynamicContent
     j = self.config.deep_dup
 
     # encrypt fields
-    j['url_userid_enc'] = (j['url_userid'].blank? ? "" : Base64.encode64(j['url_userid'].encrypt))
-    j['url_password_enc'] = (j['url_password'].blank? ? "" : Base64.encode64(j['url_password'].encrypt))
+    j['url_userid_enc'] = (j['url_userid'].blank? ? "" : Base64.encode64(Encryptor.encrypt(j['url_userid'])))
+    j['url_password_enc'] = (j['url_password'].blank? ? "" : Base64.encode64(Encryptor.encrypt(j['url_password'])))
     j.delete 'url_userid'
     j.delete 'url_password'
     self.data = JSON.dump(j)
@@ -45,7 +45,7 @@ class SimpleRss < DynamicContent
       url_userid = self.config['url_userid']
       url_password = self.config['url_password']
       type, feed_title, rss, raw = fetch_feed(url, url_userid, url_password)
-      
+
       if (["RSS", "ATOM"].include? type) && !feed_title.blank?
         # it is a valid feed
         if !self.config['reverse_order'].blank? && self.config['reverse_order'] == '1'
@@ -100,7 +100,7 @@ class SimpleRss < DynamicContent
 
           # add a replace [gsub] function for more powerful transforms.  You can use this in a transform
           # by adding the bogus namespace http://concerto.functions
-          # A nodeset comes in as an array of REXML::Elements 
+          # A nodeset comes in as an array of REXML::Elements
           XML::XSLT.registerExtFunc("http://concerto.functions", "replace") do |nodes, pattern, replacement|
             result = xslt_replace(nodes, pattern, replacement)
             result
@@ -115,7 +115,7 @@ class SimpleRss < DynamicContent
           # xslt.serve does always return a string with ASCII-8BIT encoding regardless of what the actual encoding is
           data = data.force_encoding(xslt.xml.encoding) if data
 
-          # try to load the transformed data as an xml document so we can see if there are 
+          # try to load the transformed data as an xml document so we can see if there are
           # mulitple content-items that we need to parse out, if we cant then treat it as one content item
           begin
             data_xml = REXML::Document.new('<root>' + data + '</root>')
@@ -146,7 +146,7 @@ class SimpleRss < DynamicContent
               data.split("</content-item>").each do |n|
                 htmltext = HtmlText.new()
                 htmltext.name = "#{feed_title}"
-                htmltext.data = sanitize(n.sub("<content-item>", "")) 
+                htmltext.data = sanitize(n.sub("<content-item>", ""))
                 contents << htmltext if !htmltext.data.blank?
               end
 
@@ -170,7 +170,7 @@ class SimpleRss < DynamicContent
         raise "Unexpected feed format for #{url}."
       end
     end
-    
+
     return contents
   end
 
@@ -198,7 +198,7 @@ class SimpleRss < DynamicContent
     end
 
     result
-  end    
+  end
 
   # fetch the feed, return the type, title, and contents (parsed) and raw feed (unparsed)
   def fetch_feed(url, url_userid, url_password)
@@ -254,7 +254,7 @@ class SimpleRss < DynamicContent
     when "ATOM"
       title = item.title.content
 
-      # seems like the hard way, but the only way I could figure out to get the 
+      # seems like the hard way, but the only way I could figure out to get the
       # contents without it being html encoded.  most likely a prime candidate for optimizing
       require 'rexml/document'
       entry_xml = REXML::Document.new(item.to_s)
@@ -271,7 +271,7 @@ class SimpleRss < DynamicContent
   end
 
   def items_to_html(items, type)
-    return items.collect {|item| 
+    return items.collect {|item|
       case type
       when "RSS"
         title = item.title
@@ -293,7 +293,7 @@ class SimpleRss < DynamicContent
     url = self.config['url']
     url_userid = self.config['url_userid']
     url_password = self.config['url_password']
-    unless url.blank? 
+    unless url.blank?
       Rails.logger.debug("looking up feed title for #{url}")
 
       type, title = fetch_feed(url, url_userid, url_password)
@@ -321,7 +321,7 @@ class SimpleRss < DynamicContent
         url = self.config['url']
         url_userid = self.config['url_userid']
         url_password = self.config['url_password']
-        unless url.blank? 
+        unless url.blank?
           require 'rexml/document'
           require 'xml/xslt'
 
@@ -365,7 +365,7 @@ class SimpleRss < DynamicContent
 
   def sanitize(html)
     if self.config.include?('sanitize_tags') and !self.config['sanitize_tags'].empty?
-      whitelist = ActionView::Base.sanitized_allowed_tags 
+      whitelist = ActionView::Base.sanitized_allowed_tags
       blacklist = self.config['sanitize_tags'].split(" ")
 
       html = ActionController::Base.helpers.sanitize(html, :tags => (whitelist - blacklist))
