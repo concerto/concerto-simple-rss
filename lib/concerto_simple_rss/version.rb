@@ -1,3 +1,3 @@
 module ConcertoSimpleRss
-  VERSION = "2.0"
+  VERSION = "1.2"
 end
