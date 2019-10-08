@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    concerto_simple_rss (2.0)
+    concerto_simple_rss (1.2)
       encryptor (~> 3.0)
       rails
       ruby-xslt (>= 0.9)
