@@ -16,8 +16,14 @@ class SimpleRss < DynamicContent
       encrypted_userid = Base64.decode64(j['url_userid_enc']) unless j['url_userid_enc'].blank?
       encrypted_password = Base64.decode64(j['url_password_enc']) unless j['url_password_enc'].blank?
 
-      j['url_userid'] = (encrypted_userid.blank? ? "" : Encryptor.decrypt(encrypted_userid))
-      j['url_password'] = (encrypted_password.blank? ? "" : Encryptor.decrypt(encrypted_password))
+      begin
+        j['url_userid'] = (encrypted_userid.blank? ? "" : Encryptor.decrypt(encrypted_userid))
+        j['url_password'] = (encrypted_password.blank? ? "" : Encryptor.decrypt(encrypted_password))
+      rescue StandardError => ex
+        Rails.logger.error("Unable to decrypt credentials for dynamic content id #{id}: #{ex.message}")
+        j['url_userid'] = ''
+        j['url_password'] = ''
+      end
     end
 
     self.config = j
