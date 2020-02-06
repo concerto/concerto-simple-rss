@@ -3,6 +3,24 @@
   <dd><%= content.config['url'] %></dd>
   <dt>Format</dt>
   <dd><%= content.config['output_format'].titleize %></dd>
+
+  <% if content.config['output_format'] == 'xslt' %>
+    <dt>XSLT</dt>
+    <dd>
+      <pre><%= content.config['xsl'] %></pre>
+    </dd>
+  <% end %>
+
+  <dt>Output Type</dt>
+  <dd>
+    <%= (content.config['output_type'] || 'HtmlText') == 'HtmlText' ? 'Text' : 'Ticker' %>
+  </dd>
+
+  <dt>Blacklisted HTML Tags for Sanitization</dt>
+  <dd>
+    <pre><%= content.config['sanitize_tags'] %></pre>
+  </dd>
+
   <dt>Last Successful Update</dt>
   <dd><%= content.config.include?('last_ok_refresh') ? Time.at(content.config['last_ok_refresh']).strftime('%c') : 'Never' %></dd>
   <dt>Last Attempted Update</dt>

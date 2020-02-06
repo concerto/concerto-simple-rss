@@ -64,17 +64,17 @@ class SimpleRss < DynamicContent
         case self.config['output_format']
         when 'headlines'
           feed_items.each_slice(5).with_index do |items, index|
-            htmltext = HtmlText.new()
-            htmltext.name = "#{feed_title} (#{index+1})"
-            htmltext.data = sanitize("<h1>#{feed_title}</h1> #{items_to_html(items, type)}")
-            contents << htmltext
+            new_content = new_content_type
+            new_content.name = "#{feed_title} (#{index+1})"
+            new_content.data = sanitize("<h1>#{feed_title}</h1> #{items_to_html(items, type)}")
+            contents << new_content
           end
         when 'detailed'
           feed_items.each_with_index do |item, index|
-            htmltext = HtmlText.new()
-            htmltext.name = "#{feed_title} (#{index+1})"
-            htmltext.data = sanitize(item_to_html(item, type))
-            contents << htmltext
+            new_content = new_content_type
+            new_content.name = "#{feed_title} (#{index+1})"
+            new_content.data = sanitize(item_to_html(item, type))
+            contents << new_content
           end
         when 'xslt'
           require 'rexml/document'
@@ -128,18 +128,18 @@ class SimpleRss < DynamicContent
             nodes = REXML::XPath.match(data_xml, "//content-item")
             # if there are no content-items then add the whole result (data) as one content
             if nodes.count == 0
-              htmltext = HtmlText.new()
-              htmltext.name = "#{feed_title}"
-              htmltext.data = sanitize(data)
-              contents << htmltext if !htmltext.data.blank?
+              new_content = new_content_type
+              new_content.name = "#{feed_title}"
+              new_content.data = sanitize(data)
+              contents << new_content if !new_content.data.blank?
             else
               # if there are any content-items then add each one as a separate content
               # and strip off the content-item wrapper
               nodes.each do |n|
-                htmltext = HtmlText.new()
-                htmltext.name = "#{feed_title}"
-                htmltext.data = sanitize(n.to_s.gsub(/^\s*\<content-item\>/, '').gsub(/\<\/content-item\>\s*$/,''))
-                contents << htmltext if !htmltext.data.blank?
+                new_content = new_content_type
+                new_content.name = "#{feed_title}"
+                new_content.data = sanitize(n.to_s.gsub(/^\s*\<content-item\>/, '').gsub(/\<\/content-item\>\s*$/,''))
+                contents << new_content if !new_content.data.blank?
               end
             end
           rescue => e
@@ -150,20 +150,20 @@ class SimpleRss < DynamicContent
               # if there are any content-items then add each one as a separate content
               # and strip off the content-item wrapper
               data.split("</content-item>").each do |n|
-                htmltext = HtmlText.new()
-                htmltext.name = "#{feed_title}"
-                htmltext.data = sanitize(n.sub("<content-item>", ""))
-                contents << htmltext if !htmltext.data.blank?
+                new_content = new_content_type
+                new_content.name = "#{feed_title}"
+                new_content.data = sanitize(n.sub("<content-item>", ""))
+                contents << new_content if !new_content.data.blank?
               end
 
             else
               Rails.logger.error("unable to parse resultant xml, assuming it is one content item #{e.message}")
               # raise "unable to parse resultant xml #{e.message}"
               # add the whole result as one content
-              htmltext = HtmlText.new()
-              htmltext.name = "#{feed_title}"
-              htmltext.data = sanitize(data)
-              contents << htmltext if !htmltext.data.blank?
+              new_content = new_content_type
+              new_content.name = "#{feed_title}"
+              new_content.data = sanitize(data)
+              contents << new_content if !new_content.data.blank?
             end
           end
         else
@@ -197,7 +197,7 @@ class SimpleRss < DynamicContent
         result = nodes.gsub(re_pattern, replacement)
       else
         # dont know how to handle this
-        Rails.logger.info "I'm sorry, but the xsl external function replace does not know how to handle this type #{nodes.class}"
+        Rails.logger.info "the xsl external function replace does not know how to handle this type #{nodes.class}"
       end
     rescue => e
       Rails.logger.error "there was a problem replacing #{pattern} with #{replacement} - #{e.message}"
@@ -291,7 +291,7 @@ class SimpleRss < DynamicContent
   # Simple RSS processing needs a feed URL and the format of the output content.
   def self.form_attributes
     attributes = super()
-    attributes.concat([:config => [:url, :url_userid, :url_password, :output_format, :reverse_order, :max_items, :xsl, :sanitize_tags]])
+    attributes.concat([:config => [:url, :url_userid, :url_password, :output_format, :output_type, :reverse_order, :max_items, :xsl, :sanitize_tags]])
   end
 
   # if the feed is valid we store the title in config
@@ -355,6 +355,7 @@ class SimpleRss < DynamicContent
       o.config['url_userid'] = data[:url_userid]
       o.config['url_password'] = data[:url_password]
       o.config['output_format'] = data[:output_format]
+      o.config['output_type'] = data[:output_type]
       o.config['max_items'] = data[:max_items]
       o.config['reverse_order'] = data[:reverse_order]
       o.config['xsl'] = data[:xsl]
@@ -379,4 +380,8 @@ class SimpleRss < DynamicContent
     html
   end
 
+  private
+  def new_content_type
+    (config['output_type'] || 'HtmlText') == 'Ticker' ? Ticker.new : HtmlText.new
+  end
 end
