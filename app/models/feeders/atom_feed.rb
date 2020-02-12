@@ -4,7 +4,7 @@ module Feeders
   class AtomFeed < BaseFeed
     def initialize(content, raw = nil)
       super(content, raw)
-      @title_from_content = rss.title.content
+      @title_from_content = content.title.content
     end
 
     def items
