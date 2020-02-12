@@ -28,6 +28,7 @@ module Feeders
       end
     rescue => exception
       Rails.logger.error("unable to fetch feed - #{@url}, #{exception.message}")
+      return nil
     end
 
     def instantiate_feed_for(response)
