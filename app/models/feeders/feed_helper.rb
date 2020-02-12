@@ -31,6 +31,8 @@ module Feeders
     end
 
     def instantiate_feed_for(response)
+      return if response.blank?
+
       rss = RSS::Parser.parse(response, false, true)
       if rss.blank?
         doc = REXML::Document.new(response)
