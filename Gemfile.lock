@@ -90,7 +90,7 @@ GEM
     concurrent-ruby (1.3.8)
     connection_pool (3.0.2)
     crass (1.0.7)
-    date (3.3.3)
+    date (3.5.1)
     drb (2.2.3)
     encryptor (3.0.0)
     erb (6.0.7)
@@ -118,12 +118,12 @@ GEM
     mini_mime (1.1.5)
     mini_portile2 (2.8.9)
     minitest (5.27.0)
-    net-imap (0.3.4)
+    net-imap (0.5.15)
       date
       net-protocol
     net-pop (0.1.2)
       net-protocol
-    net-protocol (0.2.1)
+    net-protocol (0.2.2)
       timeout
     net-smtp (0.3.3)
       net-protocol
